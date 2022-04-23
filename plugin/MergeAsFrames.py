@@ -5,13 +5,31 @@ from nanome.util import async_callback, enums, Logs
 class MergeAsFrames(nanome.AsyncPluginInstance):
     def start(self):
         self.set_plugin_list_button(enums.PluginListButtonType.run, 'Merge')
-        self.delete_originals = True
-        self.on_advanced_settings()
+        self.set_plugin_list_button(enums.PluginListButtonType.advanced_settings, 'Settings')
+        self.delete_originals = False
+        self.create_settings_menu()
+
+    def create_settings_menu(self):
+        menu = nanome.ui.Menu()
+        self.menu = menu
+
+        menu.title = 'Settings'
+        menu.width = 0.5
+        menu.height = 0.2
+
+        menu.root.padding_type = menu.root.PaddingTypes.ratio
+        menu.root.set_padding(top=0.35, down=0.35, left=0.05, right=0.05)
+        menu.root.forward_dist = 0.001
+
+        def toggle_delete(btn):
+            self.delete_originals = btn.selected
+
+        self.btn_delete = menu.root.add_new_toggle_switch('Delete Entries')
+        self.btn_delete.register_pressed_callback(toggle_delete)
 
     def on_advanced_settings(self):
-        self.delete_originals = not self.delete_originals
-        text = 'Delete Entries ■' if self.delete_originals else 'Delete Entries □'
-        self.set_plugin_list_button(enums.PluginListButtonType.advanced_settings, text)
+        self.menu.enabled = True
+        self.update_menu(self.menu)
 
     @async_callback
     async def on_run(self):
@@ -25,7 +43,7 @@ class MergeAsFrames(nanome.AsyncPluginInstance):
         complexes = await self.request_complexes(indices_selected)
 
         new_complex = nanome.structure.Complex()
-        new_complex.name = complexes[0].name + ' Merged'
+        new_complex.name = 'Merged ' + complexes[0].name
 
         for complex in complexes:
             complex = complex.convert_to_frames()
@@ -40,7 +58,8 @@ class MergeAsFrames(nanome.AsyncPluginInstance):
 
 
 def main():
-    plugin = nanome.Plugin('Merge As Frames', 'A Nanome plugin to merge multiple entries into the frames of a new entry. Select entries and then press the Merge button.', 'Tools', True)
+    desc = "A Nanome plugin to merge multiple entry list small molecule ligands into a single entry with multiple frames. Frames use the small molecule's local coordinate space. Ideal for creating multi-model SDFs."
+    plugin = nanome.Plugin('Merge As Frames', desc, 'Tools', True)
     plugin.set_plugin_class(MergeAsFrames)
     plugin.run()
 
